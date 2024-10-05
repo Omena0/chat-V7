@@ -105,8 +105,10 @@ class Text(Component):
 
         for segment in self.text.split('\n'):
             text = font.render(segment, 1, self.color,self.bg_color)
-            blits.append((text, (self.abs_x-text.get_width()//2, self.abs_y-text.get_height()//2+(self.size+3)*i)))
-            i += 0.5 if segment.strip() == '' else 1
+            blits.append((text, (self.abs_x-text.get_width()//2, self.abs_y+(self.size/2+4)*i)))
+            i += 0.6 if segment.strip() == '' else 1
+
+        blits = list(reversed(blits))
 
         root.disp.blits(blits)
         self.changed = False
@@ -201,11 +203,9 @@ class Button(Component):
 
             if self.center:
                 x = self.abs_x + (self.width - text.get_width()) // 2
-                y = self.abs_y + (self.height - text.get_height()*(self.text.count('\n')*1.6+1)) // 2
             else:
                 x = 5 + self.abs_x
-                y = self.abs_y + (self.height - text.get_height()*(self.text.count('\n')*1.6+1)) // 2
-
+            y = self.abs_y + (self.height - text.get_height()*(self.text.count('\n')*1.6+1)) // 2
             blits.append((text, (x, y+(self.size+3)*i)))
             i += 0.5 if segment.strip() == '' else 1
 
@@ -571,6 +571,11 @@ class Image(Component):
             with fs:
                 self.bytes = fs.read(image_path)
                 self.image = None
+        
+        elif isinstance(image_path, bytes):
+            self.image = None
+            self.bytes = image_path
+
         else:
             self.image = image_path
             self.bytes = None
@@ -596,22 +601,23 @@ class Image(Component):
         try:
             if self.bytes:
                 img = PIL.Image.open(BytesIO(self.bytes))
-                self.image = pygame.image.fromstring(img.tobytes(), img.size, img.mode).convert_alpha()
+                self._image = pygame.image.fromstring(img.tobytes(), img.size, img.mode).convert_alpha()
 
             else:
-                self.image = pygame.image.load(self.image)
+                self._image = pygame.image.load(self.image)
 
         except Exception as e:
             print(f'Failed to load image: {self.image}')
             raise ValueError(f'Failed to load image: {self.image}') from e
 
         if not (self.width and self.height): return
-        self.image = pygame.transform.smoothscale(self.image,(self.width,self.height))
+        try: self._image = pygame.transform.smoothscale(self._image,(self.width,self.height))
+        except: self._image = pygame.transform.scale(self._image,(self.width,self.height))
 
     def render(self):
         if not self.changed: return
         if hasattr(self,'image'):
-            root.disp.blit(self.image, (self.abs_x, self.abs_y))
+            root.disp.blit(self._image, (self.abs_x, self.abs_y))
         self.changed = False
         return self
 
@@ -1539,6 +1545,8 @@ class Root:
 
         if event.type == pygame.VIDEORESIZE:
             self.res = event.size
+            self.width = self.res[0]
+            self.height = self.res[1]
             self.disp = pygame.display.set_mode(
                 self.res, flags=self.disp.get_flags()
             )
