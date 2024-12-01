@@ -1,9 +1,10 @@
+from pygame_textinput import TextInputManager, TextInputVisualizer
 from pygame._sdl2 import Window as _Window
 from types import FunctionType
 from easing import get_easing
 from threading import Thread
-from copy import copy
 from io import BytesIO
+from copy import copy
 import time as t
 import PIL.Image
 import pygame
@@ -31,6 +32,8 @@ usedEvents = [
     pygame.WINDOWMAXIMIZED,
 ]
 
+pygame.event.set_allowed(usedEvents)
+
 # Mouse pos
 x = 0
 y = 0
@@ -46,32 +49,112 @@ a     = 0   # Counter used for testing
 def nothing(*args, **kwargs):
     """Does nothing"""
 
+fonts = {}
+def getFont(size:int,font=None,bold=False,italic=False) -> pygame.font.Font:
+    if (font, size, bold, italic) not in fonts:
+        fonts[font, size, bold, italic] = pygame.font.SysFont(font, size, bold, italic)
+    return fonts[font, size, bold, italic]
+
 ### COMPONENTS ###
 
 # Dummy parent class, might move some functions here.
 class Component:
-    ...
+    def setPos(self, x, y):
+        self.pos = x, y
+        self.x = x
+        self.y = y
+        self.abs_x = x + self.parent.abs_x
+        self.abs_y = y + self.parent.abs_y
+        self.abs_pos = self.abs_x, self.abs_y
+        self.changed = True
+        return self
 
+    def add(self, parent, layer=0):
+        self.layer = layer
+        self.parent = parent
+        self.setPos(self.x, self.y)
+        parent.addChild(self)
+        return self
+
+def drawTextMultiline(string, x, y, color, font:pygame.font.Font, max_width, bg_color=None, i=0):
+    blits = []
+
+    # Helper function to render text with line breaks
+    def render_line(line, x, y, i):
+        while line:
+            char_line = ''
+
+            # Add characters to the line until it's too long or the end of the line is reached
+            while line and font.size(char_line + line[0])[0] <= max_width:
+                char_line += line[0]
+                line = line[1:]
+
+            blits.append((font.render(char_line, 1, color, bg_color), (x, y + (font.get_height() + 8) * i)))
+            i += 1
+        return i
+
+    # Split the text by line breaks and render each line
+    for segment in string.replace('\\n','\n').split('\n'):
+        words = segment.split()
+        line = ''
+
+        # Render each word
+        for word in words:
+            if line:
+                line += ' '
+
+            line += word
+
+            # Check if the line is too long
+            if font.render(line, 1, color, bg_color).get_width() > max_width:
+                last_space = line.rfind(' ')
+
+                # If there is a space, split the line at that point
+                if last_space != -1:
+                    blits.append((font.render(line[:last_space], 1, color, bg_color), (x, y + (font.get_height() + 8) * i)))
+                    i += 1
+                    line = line[last_space + 1:]
+
+                # If there is no space, do character split
+                else:
+                    i = render_line(line, x, y, i)
+                    line = ''
+
+        # Render the last line
+        if line:
+            i = render_line(line, x, y, i)
+
+    blits.reverse()
+
+    # If you want to figure the amount of lines that the
+    # text takes up, you can just try to draw it
+    # (at invalid position or before root init)
+    try: root.disp.blits(blits)
+    except: ...
+
+    return i
 
 class Text(Component):
     def __init__(
             self,
             position,
             text,
-            size,
+            font,
             color=(255, 255, 255),
             bg_color=None,
-            font=None
+            align='center',
+            max_width=None
         ):
 
         self.parent = None
 
         # Style
         self.text:str = text
-        self.size = size
+        self.font = font
         self.color = color
         self.bg_color = bg_color
-        self.font = font
+        self.align = align
+        self.max_width = max_width
 
         # Position
         self.pos = position
@@ -85,40 +168,11 @@ class Text(Component):
         self.layer = 0
         self.visible = True
 
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        return self
-
     def render(self):
         if not self.changed: return
 
-        blits = []
-
-        i = 0
-        font = pygame.font.SysFont(self.font, self.size)
-
-        for segment in self.text.split('\n'):
-            text = font.render(segment, 1, self.color,self.bg_color)
-            blits.append((text, (self.abs_x-text.get_width()//2, self.abs_y+(self.size/2+4)*i)))
-            i += 0.6 if segment.strip() == '' else 1
-
-        blits = list(reversed(blits))
-
-        root.disp.blits(blits)
         self.changed = False
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
-        return self
+        return drawTextMultiline(self.text, self.abs_x, self.abs_y, self.color, self.font, self.max_width, self.bg_color)
 
 class Button(Component):
     def __init__(
@@ -164,16 +218,6 @@ class Button(Component):
         self.layer = 0
         self.visible = True
 
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        return self
-
     def checkHovered(self):
         global x,y
         self.hovered = (
@@ -195,16 +239,17 @@ class Button(Component):
         )
 
         blits = []
-        font = pygame.font.SysFont(self.font, self.size)
+        font = getFont(self.size, self.font)
         i = 0
 
         for segment in self.text.split('\n'):
-            text = font.render(segment, True, self.font_color)
+            text = font.render(segment, True, self.font_color, color)
 
             if self.center:
                 x = self.abs_x + (self.width - text.get_width()) // 2
             else:
                 x = 5 + self.abs_x
+
             y = self.abs_y + (self.height - text.get_height()*(self.text.count('\n')*1.6+1)) // 2
             blits.append((text, (x, y+(self.size+3)*i)))
             i += 0.5 if segment.strip() == '' else 1
@@ -214,16 +259,10 @@ class Button(Component):
         self.changed = False
         return self
 
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
-        return self
-
     def event(self, event):
         if event.type == pygame.MOUSEBUTTONUP and self.hovered:
             event.handled = True
+
         if event.type == pygame.MOUSEBUTTONDOWN and self.hovered:
             event.handled = True
             try:
@@ -276,16 +315,6 @@ class Checkbox(Component):
         self.layer = 0
         self.visible = True
 
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        return self
-
     def toggle(self):
         self.checked = not self.checked
         if self.action:
@@ -321,13 +350,6 @@ class Checkbox(Component):
             and y in range(self.abs_y, self.abs_y + self.height)
         )
         return self.hovered
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
-        return self
 
     def tick(self,frame):
         # CheckHovered every second tick (performance)
@@ -377,8 +399,8 @@ class Textbox(Component):
         self.multiline = multiline
 
         # Extra
-        self.repeat_delay = 10
-        self.repeat_interval = 1
+        self.repeat_delay = 50
+        self.repeat_interval = 2
         self.repeat_timer = 0
         self.repeating = False
         self.pressed = ''
@@ -395,18 +417,6 @@ class Textbox(Component):
         # Rendering
         self.layer = 0
         self.visible = True
-
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-
-        return self
 
     def checkHovered(self):
         global x,y
@@ -437,25 +447,12 @@ class Textbox(Component):
             font = pygame.font.SysFont(self.font, self.size)
 
             # Blinking cursor (i love this lmao)
-            a = f'{self.text}|' if focus == self and frame//15 % 2 == 0 else self.text
+            a = f'{self.text}|' if focus == self and frame//20 % 2 == 0 else self.text
             a = a.strip()
 
-            blits = []
-            i = 0
-            for segment in a.split('\n'):
-                text = font.render(segment, True, self.fontColor)
-                x = 3+self.abs_x               + round(self.offset_x)
-                y = 2+self.abs_y+(self.size)*i + round(self.offset_y)
-
-                i += 0.5 if segment.strip() == '' else 1
-
-                if (x in range(self.parent.abs_x,self.parent.abs_x+self.parent.width)
-                    and y in range(self.parent.abs_y,self.parent.abs_y+self.parent.height)
-                    and y+text.get_height() in range(self.parent.abs_y,self.parent.abs_y+self.parent.height)
-                ):
-                    blits.append((text, (x,y)))
-
-            root.disp.blits(blits)
+            x = 3 + self.abs_x + round(self.offset_x)
+            y = 2 + self.abs_y + round(self.offset_y)
+            drawTextMultiline(a,x,y,self.fontColor,font,self.width-3,color)
 
         self.changed = False
 
@@ -488,13 +485,6 @@ class Textbox(Component):
             if self.action:
                 self.action(self.text)
 
-        return self
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
         return self
 
     def event(self, event):
@@ -542,7 +532,7 @@ class Textbox(Component):
         for i in Easer(length,get_easing('quad')):
             try: i = next(i)+0.0001
             except StopIteration: break
-            self.offset_y += y * i * self.size / length * 3
+            self.offset_y += y * i * self.size / length * 2
             t.sleep(1/120)
 
 class Image(Component):
@@ -571,7 +561,7 @@ class Image(Component):
             with fs:
                 self.bytes = fs.read(image_path)
                 self.image = None
-        
+
         elif isinstance(image_path, bytes):
             self.image = None
             self.bytes = image_path
@@ -585,17 +575,6 @@ class Image(Component):
         # Rendering
         self.layer = 0
         self.visible = True
-
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        return self
 
     def update_image(self):
         try:
@@ -624,13 +603,6 @@ class Image(Component):
     def event(self,event):
         if event.type in (pygame.VIDEORESIZE,pygame.WINDOWMAXIMIZED):
             self.update_image()
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
-        return self
 
 class Progressbar(Component):
     def __init__(
@@ -677,16 +649,6 @@ class Progressbar(Component):
         self.shouldHalt = True           # Should halt (set externally)
         self.realProg   = 0              # The last progress value sent to us
         self.tolerance  = 0.3            # Largest difference between prog (smoothed) and realProg can be before we halt
-
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        return self
 
     def tick(self,frame):
         global a
@@ -749,13 +711,6 @@ class Progressbar(Component):
         # only lets you decrease progress if not started.
         self.progress = round(max(self.progress, progress) if self.started else progress,5)
 
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
-        return self
-
 class Slider(Component):
     def __init__(
             self,
@@ -798,16 +753,6 @@ class Slider(Component):
         self.layer = 0
         self.visible = True
 
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        return self
-
     def render(self):
         if not self.changed: return
 
@@ -846,13 +791,6 @@ class Slider(Component):
         self.value = max(0, min(value, 1))
         if self.action:
             self.action(self.value)
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
-        return self
 
     def tick(self,frame):
         # CheckHovered every second tick (performance)
@@ -902,16 +840,6 @@ class Area(Component):
         self.layer = 0
         self.visible = True
 
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        return self
-
     def render(self):
         if not self.changed: return
 
@@ -925,13 +853,6 @@ class Area(Component):
             self.corner_radius
         )
         self.changed = False
-        return self
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
         return self
 
 class Line(Component):
@@ -964,16 +885,6 @@ class Line(Component):
         self.layer = 0      # Set in .add()
         self.visible = True
 
-    def setPos(self, x, y):
-        self.x = x
-        self.y = y
-        self.pos = self.x,self.y
-        self.abs_x = self.x + self.parent.abs_x
-        self.abs_y = self.y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        return self
-
     def render(self):
         if not self.changed: return
         pygame.draw.line(
@@ -984,13 +895,6 @@ class Line(Component):
             self.width
         )
         self.changed = False
-        return self
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
         return self
 
 class Titlebar(Component):
@@ -1077,13 +981,6 @@ class Titlebar(Component):
         )
         return self.hovered
 
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
-        return self
-
     def event(self, event):
         global focus
         if event.type == pygame.MOUSEBUTTONDOWN and self.hovered:
@@ -1166,18 +1063,6 @@ class Window(Component):
         self.quit_ = True
         self.onQuit()
 
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        for child in self.children:
-            child.setPos(child.x,child.y)
-        return self
-
     def checkHovered(self):
         self.hovered = (
             x in range(self.abs_x, self.abs_x + self.width)
@@ -1245,13 +1130,6 @@ class Window(Component):
                 child.render()
 
         self.changed = False
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
-        return self
 
     def event(self, event):
         global focus
@@ -1347,30 +1225,11 @@ class Tab(Component):
             if hasattr(child,'tick'):
                 child.tick(frame)
 
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        for child in self.children:
-            child.setPos(child.x,child.y)
-        return self
-
     def render(self):
         for child in self.children:
             if child.visible:
                 child.render()
         self.changed = False
-        return self
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
         return self
 
 class Frame(Component):
@@ -1398,18 +1257,6 @@ class Frame(Component):
         self.layer = 0
         self.visible = True
 
-    def setPos(self, x, y):
-        self.pos = x, y
-        self.x = x
-        self.y = y
-        self.abs_x = x + self.parent.abs_x
-        self.abs_y = y + self.parent.abs_y
-        self.abs_pos = self.abs_x, self.abs_y
-        self.changed = True
-        for child in self.children:
-            child.setPos(child.x,child.y)
-        return self
-
     def event(self, event):
         event.handled = False
         for child in reversed(self.children):
@@ -1432,13 +1279,6 @@ class Frame(Component):
             if child.visible and child.changed:
                 child.render()
         self.changed = False
-        return self
-
-    def add(self, parent, layer=0):
-        self.layer = layer
-        self.parent = parent
-        self.setPos(self.x, self.y)
-        parent.addChild(self)
         return self
 
     def remove(self, object):
@@ -1614,7 +1454,7 @@ def update():  # sourcery skip: extract-method
             root.tick(frame)
 
         root.render()
-        for event in pygame.event.get(usedEvents):
+        for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
                 pygame.quit()

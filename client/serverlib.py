@@ -1,10 +1,9 @@
+from networkLib import Client, Packet
 import tkinter.messagebox
 import engine as ui
 import webbrowser
+import time as t
 import hashlib
-import socket
-import pickle
-import rsa
 import os
 
 newsText = """
@@ -22,6 +21,9 @@ the github issues page!
 Thanks!
 """
 
+class ProtocolError(Exception): ...
+class LoginError(Exception): ...
+
 
 ### LOGIN ###
 
@@ -29,77 +31,28 @@ HOME = os.path.join(os.environ.get('USERPROFILE'), '.chat-v7')
 
 os.makedirs(HOME, exist_ok=True)
 
-pub,priv = rsa.newkeys(2048,accurate=False)
+def connect(ip,port):
+    global client
+    client = Client(ip, port)
+    client.connect()
+    return client
 
-def connect(addr=('127.0.0.1',5000)):
-    """Establish encrypted connection"""
-    global s, pub, priv, serverPub
-    s = socket.socket()
-    s.connect(addr)
-    s.send(pub.save_pkcs1())
-    serverPub = rsa.PublicKey.load_pkcs1(s.recv(2048))
-
-
-def send(data, encrypted=True):
-    if isinstance(data,str):
-        data = data.encode()
-
-    elif not isinstance(data, bytes):
-        data = pickle.dumps(data)
-
-    if not encrypted:
-        return s.send(data)
-
-    return s.send(rsa.encrypt(data,serverPub))
-
-
-def recv(encrypted=True):
-    data = bytes()
-    s.settimeout(0.1)
-
-    while True:
-        try:
-            data += s.recv(1024)
-        except:
-            if data:
-                break
-
-    s.settimeout(None)
-
-    if not encrypted: return data
-
-    return rsa.decrypt(data, priv)
-
-
-def get(thing, type=None):
-    send(f'GET {"file" if type == "file" else ""} {thing}')
-    data = recv(type != 'file')
-
-    print(data)
-
-    if type in {None, 'file'}:
-        return data
-
-    elif type == 'list':
-        return data.splitlines()
-
-    elif type == 'object':
-        return pickle.loads(data)
-
-    elif type == 'string':
-        return data.decode()
-    
-    raise ValueError('Invalid type')
-
-
-def _login():
-    global username, password, serverPub
+def _login_button():
     username = username_field.text
     password = hashlib.md5(password_field.text.encode()).hexdigest()
-    send(f'{username}\n{password}')
+    _login(username, password)
 
-    status = recv().decode()
-    if status == 'INVALID':
+def _login(username,password):
+    client.send(Packet('LOGIN', f'{username}\n{password}'))
+
+    response = client.recv()
+
+    print(response)
+
+    if response.type != 'status':
+        raise ProtocolError(f'Invalid login status response type: {response.type}')
+
+    if response.data != 'OK':
         tkinter.messagebox.showerror("Invalid credentials", "Please check your credentials and try again")
         return False
 
@@ -109,8 +62,7 @@ def _login():
 
     return True
 
-
-def login_ui():
+def _login_ui():
     global username_field, password_field, login_root
     login_root = ui.Root(
         "Log in to Chat-V7",
@@ -176,7 +128,7 @@ def login_ui():
         color = (50,50,100),
         hover_color=(60,60,120),
         font_color=(130,130,255),
-        action=_login
+        action=_login_button
     ).add(login_root)
 
     # News
@@ -203,17 +155,50 @@ def login_ui():
 
     ui.mainloop()
 
+def login(ui=True):
+    if os.path.exists(os.path.join(HOME, 'loginData.bin')):
+        try:
+            with open(os.path.join(HOME, 'loginData.bin'), 'r') as f:
+                username, password = f.read().split('\n')
 
-def login():
-    if not os.path.exists(os.path.join(HOME, 'loginData.bin')):
-        login_ui()
+            _login(username, password)
+        except:
+            if ui:
+                _login_ui()
 
+    elif ui:
+        _login_ui()
     else:
-        with open(os.path.join(HOME, 'loginData.bin'), 'r') as f:
-            username, password = f.read().split('\n')
+        raise LoginError('Could not log in.')
 
-        send(f'{username}\n{password}')
-        status = recv().decode()
-        if status == 'INVALID':
-            tkinter.messagebox.showerror("Invalid credentials", "Please check your credentials and try again")
+def get(data):
+    client.send(Packet('GET', data))
 
+    packet = client.recv()
+    
+    if not packet: return
+
+    if packet.type in {'response', 'data', 'status'}:
+        return packet.data
+    else:
+        raise ProtocolError(f'Invalid GET response type: {packet.type}')
+
+def send(server,channel,content):
+    if not content: return
+    client.send(Packet('SEND', f'{server} {channel} {content}'))
+
+    response = client.recv()
+
+    if not response:
+        print('Timed out')
+        return
+
+    if response.type != 'status':
+        raise ProtocolError(f'Invalid SEND response type: {response.type}')
+
+    if response.data == 'OK':
+        return True
+    elif response.data == 'INVALID_REQUEST':
+        raise ProtocolError('Invalid request.')
+    else:
+        return False

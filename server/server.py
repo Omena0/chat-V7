@@ -1,8 +1,9 @@
-from threading import Thread
+from networkLib import server, Interface, Packet
+from copy import deepcopy
+import random as r
+import time as t
 import hashlib
-import socket
 import pickle
-import rsa
 import os
 
 try: os.chdir('server')
@@ -13,169 +14,397 @@ except:  passwords = {}
 
 files = os.listdir('files')
 
-
 # Servers: dict[server id: server data[name: str, icon: bytes, users: list[str]]]
 try: servers = pickle.load(open('servers.bin','rb'))
-except: servers = [
-        {
+except: servers = {
+        5189346598134: {
             "name": "test1",
             "icon": '1.png',
-            "users": ["frfr"],
+            "owner": "frfr",
+            "users": ["frfr", "testuser1"],
             "channels": {
-                "announcements": {
+                414534113453534: {
+                    "name": "announcements",
                     "description": "frfr ong",
+                    "permissions": {
+                        "*": {
+                            "read": True,
+                            "write": False,
+                            "edit": False
+                        }
+                    },
+                    "messages": {
+                        453451345134: {
+                            "author": "frfr",
+                            "content": "frfr ong",
+                            "timestamp": 1728143064
+                        }
+                    }
+                },
+                15345134534134: {
+                    "name": "discussion",
+                    "description": "real",
+                    "permissions": {
+                        "*": {
+                            "read": True,
+                            "write": True,
+                            "edit": True
+                        }
+                    },
+                    "messages": {
+                        5134513453: {
+                            "author": "joe_mama",
+                            "content": "bing chilling",
+                            "timestamp": 172814824
+                        }
+                    }
+                }
+            },
+            "roles": {
+                "staff": {
+                    "name": "staff",
+                    "permissions": {
+                        "*": {
+                            "read": True,
+                            "write": True,
+                            "edit": True
+                        }
+                    },
+                    "members": ['frfr','testuser1']
+                },
+                "*": {
+                    "name": "everyone",
+                    "permissions": {
+                        "*": {
+                            "read": False,
+                            "write": False,
+                            "edit": False
+                        }
+                    },
+                    "members": ['frfr', 'testuser1']
+                },
+            }
+        },
+        5189351345134: {
+            "name": "test2",
+            "icon": '1.png',
+            "owner": "capade",
+            "users": ["capade", "frfr", "testuser2"],
+            "channels": {
+                153451345345134: {
+                    "name": "announcements",
+                    "description": "annoucmentments",
+                    "permissions": {
+                        "*": {
+                            "read": True,
+                            "write": False,
+                            "edit": False
+                        }
+                    },
+                    "messages": {
+                        3415345134534: {
+                            "author": "capade",
+                            "content": "did scientist just quantum entangle a living tardigrade!??!?!?!??!???!???!",
+                            "timestamp": 1728143069
+                        }
+                    }
+                },
+                1345134534513: {
+                    "name": "general",
+                    "description": "real",
                     "permissions": {
                         "*": {
                             "read": True,
                             "write": True
                         }
                     },
-                    "messages": [
-                        {
-                            "author": "frfr",
-                            "content": "frfr ong",
-                            "timestamp": 1728143064
+                    "messages": {
+                        5134513424745: {
+                            "author": "joe_mama",
+                            "content": "bing chilling",
+                            "timestamp": 172814824
                         }
-                    ]
+                    }
                 }
+            },
+            "roles": {
+                "staff": {
+                    "name": "staff",
+                    "permissions": {
+                        "*": {
+                            "read": True,
+                            "write": True,
+                            "edit": True
+                        }
+                    },
+                    "members": ['capade','testuser2']
+                },
+                "*": {
+                    "name": "everyone",
+                    "permissions": {
+                        "*": {
+                            "read": False,
+                            "write": False,
+                            "edit": False
+                        }
+                    },
+                    "members": ['frfr', 'testuser1']
+                },
             }
         }
-    ]
+    }
 
-pub,priv = rsa.newkeys(2048,accurate=False)
+server_ids = list(servers.keys())
 
-s = socket.socket()
+netdebug = True
 
-s.bind(('127.0.0.1',5000))
+clients = set()
 
-s.listen(5)
+def get_by_id(id:int):
+    for serverId,server in servers.items():
+        if serverId == id:
+            return server
 
-client_sockets = set()
+def get_channel_by_id(serverId:int,channelId:int):
+    return get_by_id(serverId)['channels'].get(channelId)
+
+def add_to_role(serverId:int, role, member):
+    server = get_by_id(serverId)
+    if server is None: return False
+    if role not in server['roles']: return False
+    server['roles'][role].append(member)
+    return True
+
+def remove_from_role(serverId:int, role, member):
+    server = get_by_id(serverId)
+    if server is None: return False
+    if role not in server['roles']: return False
+    server['roles'][role].remove(member)
+    return True
+
+def get_roles(serverId, user):
+    server = get_by_id(serverId)
+    if server is None: return []
+    return [role for role in server['roles'] if user in server['roles'][role]['members']]
+
+def has_permission(serverId, channelId, member, permission):
+    channel = get_channel_by_id(channelId)
+    if channel is None: return False
+
+    user_roles = get_roles(serverId, member)
+
+    hasPerm = None
+    for role,permissions in channel['permissions'].items():
+        if role not in user_roles: continue
+        if permissions.get(permission) is None:
+            continue
+        hasPerm = permissions[permission]
+
+    if hasPerm is None:
+        for role in user_roles.values():
+            if role['permissions'].get(permission) is None:
+                continue
+            hasPerm = role['permissions'][permission]
+
+    return hasPerm
 
 def save_all():
     pickle.dump(passwords, open('accounts.bin','wb'))
     pickle.dump(servers,open('servers.bin','wb'))
 
-netdebug = True
+print('Server started!')
 
-def send(cs, data, pub=None):
-    if netdebug: print(f'-> {data}')
+print(files)
 
-    if isinstance(data,str):
-        data = data.encode()
-
-    elif not isinstance(data, bytes):
-        data = pickle.dumps(data)
-
-    if not pub:
-        return cs.send(data)
-
-    return cs.send(rsa.encrypt(data,pub))
-
-
-def recv(cs, encrypted=True):
-    data = bytes()
-    cs.settimeout(0.1)
-
-    while True:
-        try:
-            data += cs.recv(1024)
-
-        except:
-            if data:
-                break
-
-    cs.settimeout(None)
-
-    if not encrypted:
-        if netdebug: print(f' <- {data}')
-        return data
-
-    data = rsa.decrypt(data, priv)
-    if netdebug: print(f' <- {data}')
-
-    return data
-
-
-def csHandler(cs,addr):
-    # Establish encrypted connection
-    clientPub = rsa.PublicKey.load_pkcs1(cs.recv(2048))
-    cs.send(pub.save_pkcs1())
-    username, password = recv(cs).split(b'\n')
-
-    username = username.decode()
+# Create server
+@server('127.0.0.1', 5000, block=True)
+def csHandler(cs:Interface,addr:tuple[str,int]):
+    username, password = cs.recv().data.split('\n')
 
     if not isinstance(password, bytes):
         password = password.encode()
 
     if username in passwords:
         if hashlib.md5(password).hexdigest() != passwords[username]:
-            send(cs, "INVALID",clientPub)
+            cs.send(Packet('status', 'INVALID'))
             cs.close()
     else:
         passwords[username] = hashlib.md5(password).hexdigest()
 
-    send(cs,'OK',clientPub)
+    cs.send(Packet('status', 'OK'))
 
     print(f"[+] {username} connected.")
 
-    client_sockets.add(cs)
+    clients.add(cs)
 
     ## USER DATA
-    user_servers = [server for server in servers if username in server['users']]
+    user_servers = {id:server for id, server in deepcopy(servers).items() if username in server['users']}
 
-    print(f'User servers: {user_servers}')
+    for server in user_servers.values():
+        for id,channel in server['channels'].items():
+            channel['id'] = id
+            channel['messages'] = len(channel['messages'])
 
     while True:
-        data = recv(cs)
+        packet = cs.recv()
 
-        if isinstance(data, bytes):
-            try: data = data.decode()
-            except:
-                print('Decode failed')
+        if packet is None: continue
+
+        if packet is False:
+            clients.remove(cs)
+            cs.close()
+            return
+
+        print(f"Received from {addr}: {packet}")
+
+        args = packet.data.split()
+
+        if packet.type == 'GET':
+            if len(args) < 1:
+                cs.send(Packet('status','INVALID_REQUEST'))
                 continue
 
-        if not data:
-            break
+            if args[0] == 'servers':
+                cs.send(Packet('response', user_servers))
 
-        print(f"Received from {addr}: {data}")
-
-        args = data.split()
-
-        if args[0] == 'GET':
-            if args[1] == 'servers':
-                send(cs, user_servers, clientPub)
-
-            elif args[1] == 'file':
-                if args[2] not in files:
-                    send(cs, 'FILE_NOT_FOUND')
+            elif args[0] == 'file':
+                if len(args) < 2:
+                    cs.send(Packet('status','INVALID_REQUEST'))
+                    continue
+                if args[1].split('/')[0] not in files:
+                    cs.send(Packet('status','NOT_FOUND'))
                 else:
-                    send(cs, open(f'files/{args[2]}', 'rb').read())
-        
-        elif args[0] == 'CREATE':
-            if args[1] == 'server':
-                name = args[2]
-                id = hashlib.sha256(len(servers),usedforsecurity=False)
-                servers.append({
+                    cs.send(Packet('data', open(f'files/{args[1]}', 'rb').read()))
+
+            elif args[0] == 'messages':
+                if len(args) < 3:
+                    cs.send(Packet('status','INVALID_REQUEST'))
+                    continue
+                elif len(args) == 3:
+                    args.append(args[-1]+1)
+
+                if int(args[1]) not in server_ids:
+                    cs.send(Packet('status','NOT_FOUND'))
+                    continue
+
+                server = get_by_id(int(args[1]))
+
+                if not server or int(args[2]) not in server['channels'].keys():
+                    cs.send(Packet('status','NOT_FOUND'))
+                    continue
+
+                else:
+                    messages = list(servers[int(args[1])]['channels'][int(args[2])]['messages'].values())[int(args[3]):int(args[4])]
+                    cs.send(Packet('response', messages))
+
+        elif packet.type == 'CREATE':
+            if len(args) < 2:
+                cs.send(Packet('status','INVALID_REQUEST'))
+                continue
+
+            if args[0] == 'server':
+                name = args[1]
+                id = r.randrange(100000000000000,999999999999999)
+                server_ids.append(id)
+                servers[id] = {
                     "name": name,
-                    "icon": 'assets/default/server.png.png',
-                    "users": [username]
-                })
+                    "id": id,
+                    "icon": 'assets/default/server.png',
+                    "users": [username],
+                    "channels": {}
+                }
 
+            elif args[0] == 'channel':
+                serverId = int(args[1])
+                name = args[2]
 
-    client_sockets.remove(cs)
+                if serverId not in server_ids:
+                    cs.send(Packet('status','NOT_FOUND'))
+                    continue
 
-print('Server started!')
+                server = get_by_id(serverId)
 
-try:
-    while True:
-        cs, addr = s.accept()
-        Thread(target=csHandler,args=(cs,addr)).start()
-except:
-    ...
+                id = r.randrange(100000000000000,999999999999999)
 
+                server['channels'][id] = {
+                    "name": name,
+                    "id": id,
+                    "description": "real",
+                    "permissions": {
+                        "*": {
+                            "read": True,
+                            "write": True,
+                            "edit": False
+                        }
+                    },
+                    "messages": {}
+                }
 
-s.close()
+        elif packet.type == 'SEND':
+            if len(args) < 3:
+                cs.send(Packet('status','INVALID_REQUEST'))
+                continue
+
+            serverId  = int(args[0])
+            channelId = int(args[1])
+
+            if serverId not in server_ids:
+                cs.send(Packet('status','NOT_FOUND'))
+                continue
+
+            server = get_by_id(serverId)
+
+            if channelId not in server['channels'].keys():
+                cs.send(Packet('status','NOT_FOUND'))
+                continue
+
+            content = ''.join([chr for chr in ' '.join(args[2:]) if chr.isprintable()])
+
+            messageId = r.randint(100000000000000,999999999999999)
+
+            message = {
+                    "author": username,
+                    "content": content,
+                    "timestamp": round(t.time())
+                }
+
+            servers[serverId]['channels'][channelId]['messages'][messageId] = message
+
+            cs.send(Packet('status', 'OK'))
+
+        elif packet.type == 'EDIT':
+            if args[0] == 'server':
+                serverId = int(args[1])
+                if serverId not in server_ids:
+                    cs.send(Packet('status','NOT_FOUND'))
+                    continue
+
+                server = get_by_id(serverId)
+
+                server['name'] = args[1]
+
+            elif args[0] == 'channel':
+                serverId = int(args[1])
+                channelId = int(args[2])
+                if serverId not in server_ids:
+                    cs.send(Packet('status','NOT_FOUND'))
+                    continue
+
+                server  = get_by_id(serverId)
+                channel = get_channel_by_id(serverId,channelId)
+
+                if not channelId:
+                    cs.send(Packet('status','NOT_FOUND'))
+                    continue
+
+                if not channel['permissions'].get('edit',False):
+                    cs.send(Packet('status','FORBIDDEN'))
+                    continue
+
+                channel['name'] = args[3]
+                channel['description'] = args[4]
+                channel['permissions'] = args[5]
+
 save_all()
 print("Server stopped.")
 
