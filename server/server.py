@@ -93,7 +93,7 @@ except: servers = {
             "channels": {
                 153451345345134: {
                     "name": "announcements",
-                    "description": "annoucmentments",
+                    "description": "announcements",
                     "permissions": {
                         "*": {
                             "read": True,
@@ -156,8 +156,6 @@ except: servers = {
 
 server_ids = list(servers.keys())
 
-netdebug = True
-
 clients = set()
 
 def get_by_id(id:int):
@@ -208,17 +206,18 @@ def has_permission(serverId, channelId, member, permission):
 
     return hasPerm
 
+def get_user_servers(username):
+    return {id:server for id, server in deepcopy(servers).items() if username in server['users']}
+
 def save_all():
     pickle.dump(passwords, open('accounts.bin','wb'))
     pickle.dump(servers,open('servers.bin','wb'))
 
 print('Server started!')
 
-print(files)
-
 # Create server
 @server('127.0.0.1', 5000, block=True)
-def csHandler(cs:Interface,addr:tuple[str,int]):
+def csHandler(cs:Interface,addr:tuple[str,int]): # sourcery skip: low-code-quality
     username, password = cs.recv().data.split('\n')
 
     if not isinstance(password, bytes):
@@ -238,7 +237,7 @@ def csHandler(cs:Interface,addr:tuple[str,int]):
     clients.add(cs)
 
     ## USER DATA
-    user_servers = {id:server for id, server in deepcopy(servers).items() if username in server['users']}
+    user_servers = get_user_servers(username)
 
     for server in user_servers.values():
         for id,channel in server['channels'].items():
@@ -258,6 +257,10 @@ def csHandler(cs:Interface,addr:tuple[str,int]):
         print(f"Received from {addr}: {packet}")
 
         args = packet.data.split()
+
+        if 'None' in args:
+            cs.send(Packet('status','INVALID_REQUEST'))
+            continue
 
         if packet.type == 'GET':
             if len(args) < 1:
@@ -280,6 +283,7 @@ def csHandler(cs:Interface,addr:tuple[str,int]):
                 if len(args) < 3:
                     cs.send(Packet('status','INVALID_REQUEST'))
                     continue
+
                 elif len(args) == 3:
                     args.append(args[-1]+1)
 
@@ -313,6 +317,7 @@ def csHandler(cs:Interface,addr:tuple[str,int]):
                     "users": [username],
                     "channels": {}
                 }
+                user_servers = get_user_servers(username)
 
             elif args[0] == 'channel':
                 serverId = int(args[1])
@@ -381,7 +386,9 @@ def csHandler(cs:Interface,addr:tuple[str,int]):
 
                 server = get_by_id(serverId)
 
-                server['name'] = args[1]
+                server['name'] = args[2].replace('\t',' ')
+                server['description'] = args[3].replace('\t',' ')
+                user_servers = get_user_servers(username)
 
             elif args[0] == 'channel':
                 serverId = int(args[1])

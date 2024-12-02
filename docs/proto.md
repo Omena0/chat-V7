@@ -17,7 +17,7 @@ Data: `OK`, `INVALID`
 
 Type: `GET`
 
-Data: `<data|file|servers|user|messages>`
+Data: `<file|servers|user|messages>`
 
 ### Response 1 (err)
 
@@ -30,3 +30,15 @@ Data: `NOT_FOUND`, `FORBIDDEN`
 Type: `data`
 
 Data: `{requested_data}`
+
+## SEND
+
+Type: `SEND`
+
+Data: `<serverId> <channelId> <messageContent>`
+
+### Response
+
+Type: `status`
+
+Data: `NOT_FOUND`, `FORBIDDEN`, `OK`

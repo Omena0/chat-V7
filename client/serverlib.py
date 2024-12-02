@@ -175,7 +175,7 @@ def get(data):
     client.send(Packet('GET', data))
 
     packet = client.recv()
-    
+
     if not packet: return
 
     if packet.type in {'response', 'data', 'status'}:

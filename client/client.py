@@ -17,13 +17,16 @@ client = serverlib.connect('127.0.0.1', 5000)
 serverlib.login()
 
 # Util methods
-def pullData():
+def pullData(r=0):
     global servers, server_icons
     servers = serverlib.get('servers')
 
     if not isinstance(servers, dict):
+        if r > 10:
+            print('Failed to update servers.')
+            return None
         t.sleep(0.5)
-        return pullData()
+        return pullData(r=r+1)
 
     server_icons = {}
 
@@ -49,23 +52,30 @@ def create_server(name):
     pullData()
     update_ui()
 
-def create_server_popup():  # sourcery skip: inline-immediately-returned-variable
+def edit_server(serverId, serverName, serverDescription):
+    client.send(Packet('EDIT',f'server {serverId} {serverName.replace(' ','\t')} {serverDescription.replace(' ','\t')}'))
+    pullData()
+    selected_server['name'] = serverName
+    selected_server['description'] = serverDescription
+    refresh_ui()
+
+def prompt(title,description,prompt,callback):
     global popups
     p = Popup(
         (root.width//2-200,root.height//2-100),
         (400,200),
-        'Create server',
-        'Enter server name',
+        title,
+        description,
         {
-            'name': {
+            'prompt': {
                 'type': 'input',
-                'name': 'Server name',
+                'name': prompt,
                 'size': 20
             },
             'ok': {
                 'type': 'button',
                 'text': 'OK',
-                'action': lambda: (create_server(p.components['name']['manager'].value), p.close())
+                'action': lambda: (callback(p.components['prompt']['manager'].value), p.close())
             },
             'cancel': {
                 'type': 'button',
@@ -96,7 +106,11 @@ def refresh_ui():
     ### Get messages ###
     selectedId = selected_server.get('id')
     selectedChannelId = selected_channels.get(selectedId,{}).get('id')
-    selectedMessages = get_messages(selectedId,selectedChannelId,0,50)
+    if selectedId and selectedChannelId:
+        selectedMessages = get_messages(selectedId,selectedChannelId,0,50)
+
+    else:
+        selectedMessages = {}
 
     update_ui()
 
@@ -106,20 +120,18 @@ pullData()
 ### COLORS ###
 
 def init_colors(hue):
-    global HUE, COLOR_PRIMARY, COLOR_SECONDARY, COLOR_TERTIARY, TEXT, TEXT_HIGHLIGHT
+    global HUE, colors, TEXT, TEXT_HIGHLIGHT
 
     HUE = hue*360
 
-    COLOR_PRIMARY   = hsl(HUE, 50, 10)
-    COLOR_SECONDARY = hsl(HUE, 50, 15)
-    COLOR_TERTIARY  = hsl(HUE, 50, 20)
+    colors = [hsl(HUE, 50, l) for l in range(10,100,5)]
 
     TEXT = hsl(HUE, 0.50, 0.90)
     TEXT_HIGHLIGHT = hsl(HUE, 0.80, 0.80)
 
     try:
         update_ui()
-        root.bg_color = COLOR_PRIMARY
+        root.bg_color = colors[0]
     except: ...
 
 init_colors(230)
@@ -160,11 +172,12 @@ class Popup(ui.Component):
         self.eventCallbacks = []
         self.blitCallbacks = []
 
+        inputs  = 0
         buttons = 0
 
-        for i, (name, component) in enumerate(self.components.items()):
+        for component in self.components.values():
             if component['type'] == 'input':
-
+                inputs += 1
                 component['manager'] = ui.TextInputManager()
                 component['visualizer'] = ui.TextInputVisualizer(
                     component['manager'],
@@ -177,7 +190,7 @@ class Popup(ui.Component):
                 visualizer:ui.TextInputVisualizer = component['visualizer']
 
                 self.eventCallbacks.append(visualizer.update)
-                self.blitCallbacks.append(lambda: (visualizer.surface, (self.abs_x+padx*3, self.abs_y+pady+60)))
+                self.blitCallbacks.append(lambda: (visualizer.surface, (self.abs_x+padx*3, self.abs_y+pady+60*inputs)))
 
             elif component['type'] == 'button':
                 buttons += 1
@@ -249,7 +262,7 @@ class Popup(ui.Component):
             (50,50,50)
         )
 
-        for i, (name, component) in enumerate(self.components.items()):
+        for component in self.components.values():
             if component['type'] == 'input':
                 ui.focus = None
 
@@ -287,7 +300,7 @@ pady = 5
 
 toppady = 10
 
-root = ui.Root("Chat-V7", bg=COLOR_PRIMARY, res=(700, 600), show_fps=True)
+root = ui.Root("Chat-V7", bg=colors[0], res=(700, 600), show_fps=True)
 
 selected_server = list(servers.values())[0] if servers else None
 
@@ -314,7 +327,7 @@ def update_ui():
         (0,0),
         server_list.width+padx*2,
         server_list.height,
-        COLOR_SECONDARY
+        colors[1]
     ).add(server_list)
 
     ### SERVER LIST ###
@@ -350,10 +363,12 @@ def update_ui():
         50,
         "+",
         45,
-        lambda: create_server_popup()
+        lambda: prompt('Create Server', 'Create a new server', 'Server Name:', lambda name: create_server(name)),
+        color=colors[2],
+        hover_color=colors[3]
     ).add(server_list)
 
-    ### CHANNEL LIST ###
+    ### CHANNEL LIST ### (and server name)
     if selected_server:
         channel_list = ui.Frame(
             (server_list.width+padx*4,pady),
@@ -365,8 +380,20 @@ def update_ui():
             (0,0),
             channel_list.width,
             channel_list.height,
-            COLOR_SECONDARY,
+            colors[1],
             corner_radius=7
+        ).add(channel_list)
+
+        ui.Button(
+            (padx, pady),
+            channel_list.width-padx*2,
+            30,
+            selected_server['name'],
+            25,
+            lambda: prompt("Edit server", "Edit server name", "Server Name", lambda name: prompt("Edit Server", "Edit server description", "server description", lambda description: edit_server(selectedId,name,description))),
+            corner_radius=7,
+            color=colors[2],
+            hover_color=colors[3]
         ).add(channel_list)
 
         for lines, channel in enumerate(servers[selectedId]['channels'].values()):
@@ -378,14 +405,15 @@ def update_ui():
                 return func
 
             ui.Button(
-                (padx, lines*(30+pady)+pady),
+                (padx, lines*(30+pady)+30+pady*3),
                 channel_list.width-padx*2,
                 30,
                 channel['name'],
                 20,
                 callback(thing=channel),
                 corner_radius=7,
-                color=COLOR_TERTIARY
+                color=colors[2],
+                hover_color=colors[3]
             ).add(channel_list)
 
     ### MEMBER LIST ###
@@ -400,7 +428,7 @@ def update_ui():
             (0,0),
             channel_list.width,
             channel_list.height-pady,
-            COLOR_SECONDARY,
+            colors[1],
             corner_radius=7
         ).add(member_list)
 
@@ -418,7 +446,8 @@ def update_ui():
                 20,
                 callback(thing=member),
                 corner_radius=7,
-                color=COLOR_TERTIARY
+                color=colors[2],
+                hover_color=colors[3]
             ).add(member_list)
 
     ### CHAT ###
@@ -467,9 +496,9 @@ def update_ui():
             30+lines*30,
             30,
             corner_radius=10,
-            color=COLOR_SECONDARY,
-            hover_color=COLOR_SECONDARY,
-            focus_color=COLOR_TERTIARY,
+            color=colors[1],
+            hover_color=colors[1],
+            focus_color=colors[2],
             multiline=True,
             action=callback,
             text = message_bar_content

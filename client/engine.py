@@ -13,7 +13,6 @@ pygame.init()
 
 clock = pygame.time.Clock()
 
-
 # Basic
 running = True
 root   = None
@@ -890,8 +889,8 @@ class Line(Component):
         pygame.draw.line(
             root.disp,
             self.color,
-            self.from_,
-            self.to,
+            self.abs_pos,
+            (self.parent.abs_x+self.to[0], self.parent.abs_y+self.to[1]),
             self.width
         )
         self.changed = False

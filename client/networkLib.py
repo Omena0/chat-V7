@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from threading import Thread
+from typing import NoReturn
 from typing import Any
-import time as t
 import pickle
 import socket
+import zstd
 import rsa
 
 KEYSIZE = 1024
@@ -22,20 +23,22 @@ class Packet:
 
     @property
     def bytes(self):
-        return pickle.dumps(self.json)
+        return zstd.compress(pickle.dumps(self.json),10)
 
-    def fromDict(dict):  # sourcery skip: instance-method-first-arg-name
+    @staticmethod
+    def fromDict(dict):
         return Packet(**dict)
 
-    def fromBytes(bytes): # sourcery skip: instance-method-first-arg-name
-        return Packet.fromDict(pickle.loads(bytes))
+    @staticmethod
+    def fromBytes(bytes):
+        return Packet.fromDict(pickle.loads(zstd.decompress(bytes)))
 
 
 class Client:
     def __init__(self, ip, port):
         self.addr = ip,port
         self.s = socket.socket()
-        self.s.settimeout(10)
+        self.s.settimeout(5)
         self.pub, self.priv = rsa.newkeys(KEYSIZE)
 
     def connect(self):
@@ -67,8 +70,7 @@ class Client:
 
         if packet.type == 'chunk':
             nextPacket = self.recv()
-            try: packet = Packet(nextPacket.type, packet.data + nextPacket.data)
-            except: return None
+            packet = Packet(nextPacket.type, packet.data + nextPacket.data)
 
         try:
             packet.data = pickle.loads(packet.data)
@@ -139,7 +141,7 @@ class Server:
         self.s.settimeout(10)
         self.pub, self.priv = rsa.newkeys(KEYSIZE)
 
-    def start_blocking(self):
+    def start_blocking(self) -> NoReturn:
         self.s.bind(self.addr)
         self.s.listen(5)
 
