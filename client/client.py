@@ -561,5 +561,7 @@ root.show(True)
 ui.running = True
 while ui.running:
     ui.update()
-    if ui.frame % 1 == 0:
-        init_colors((HUE+1)%360/360)
+    init_colors((HUE+1)%360/360)
+
+    if ui.frame % 70 == 0:
+        refresh_ui()
