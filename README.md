@@ -1,4 +1,6 @@
 
 # chat-V7
 
-Chat v6 but gui
+A Modern discord-like chat application featuring servers, channels, permissions and more!
+
+Made 100% in python.
