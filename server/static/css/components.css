@@ -1,0 +1,266 @@
+/* UI Components for chat application */
+
+/* Section headers */
+.section-header {
+  padding: 16px 16px 8px;
+  color: #b9bbbe;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Server list */
+.server-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+  width: 72px; /* Proper width for server icons */
+  scrollbar-width: thin; /* For Firefox */
+  overflow-y: auto;
+}
+
+/* Hide scrollbar when not needed */
+.server-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.server-sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.server-sidebar .server-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #5865f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  font-weight: bold;
+  color: white;
+  min-width: 48px; /* Ensure consistent width */
+  max-width: 48px; /* Prevent stretching */
+  flex: 0 0 48px; /* Fixed size, no growing or shrinking */
+}
+
+.server-sidebar .server-icon:hover {
+  border-radius: 16px;
+  background: #4752c4;
+}
+
+.server-sidebar .server-icon.selected {
+  border-radius: 16px;
+  background: #5865f2;
+  border-color: #fff;
+}
+
+/* Friend and DM items */
+.friend-item, .dm-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.friend-item:hover, .dm-item:hover {
+  background: #393c43;
+}
+
+.friend-item.active, .dm-item.active {
+  background: #393c43;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-right: 8px;
+  color: white;
+}
+
+.friend-name, .dm-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friend-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
+
+/* Request badge */
+.request-badge {
+  background: #f04747;
+  color: white;
+  border-radius: 50%;
+  min-width: 18px;
+  height: 18px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* Server header */
+.server-header {
+  padding: 16px;
+  border-bottom: 1px solid #232428;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.server-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Server dropdown menu */
+.server-header-menu {
+  position: absolute;
+  background: #18191c;
+  border-radius: 4px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  z-index: 10;
+  overflow: hidden;
+  width: 200px;
+  display: none;
+}
+
+.server-header-menu.show {
+  display: block;
+}
+
+.server-header-menu-item {
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.server-header-menu-item:hover {
+  background: #4752c4;
+}
+
+.server-header-menu-item.danger {
+  color: #f04747;
+}
+
+.server-header-menu-item.danger:hover {
+  background: #f04747;
+  color: white;
+}
+
+/* Channel list styling */
+.channels-sidebar h5 {
+  color: #b9bbbe;
+  font-size: 12px;
+  text-transform: uppercase;
+  margin: 24px 0 8px 16px;
+  letter-spacing: 1px;
+}
+
+.channels-sidebar ul {
+  list-style: none;
+  padding: 0 8px 0 8px;
+  margin: 0;
+}
+
+.channels-sidebar li {
+  color: #b9bbbe;
+  padding: 6px 8px;
+  margin: 2px 0;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 15px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.channels-sidebar li .channel-name:before {
+  content: '#';
+  margin-right: 6px;
+  opacity: 0.5;
+}
+
+.channels-sidebar li .channel-actions {
+  display: none;
+}
+
+.channels-sidebar li:hover .channel-actions {
+  display: flex;
+}
+
+.channel-actions button {
+  background: transparent;
+  border: none;
+  color: #b9bbbe;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 14px;
+}
+
+.channel-actions button:hover {
+  color: white;
+}
+
+.channels-sidebar li.selected, .channels-sidebar li:hover {
+  background: #393c43;
+  color: #fff;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #36393f;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.toast.success {
+  border-left: 4px solid #3ba55d;
+}
+
+.toast.error {
+  border-left: 4px solid #ed4245;
+}
+
+.toast.info {
+  border-left: 4px solid #5865f2;
+}
+
+.toast.show {
+  display: block;
+  opacity: 1;
+}

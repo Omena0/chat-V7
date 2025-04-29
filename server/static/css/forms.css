@@ -1,0 +1,156 @@
+/* Form styles for chat application */
+
+/* Button styles */
+button {
+  background: #5865f2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #4752c4;
+}
+
+button.small-button {
+  font-size: 12px;
+  padding: 6px 10px;
+  margin: 4px 8px;
+}
+
+button.create-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 2em;
+  align-self: center;
+  margin-top: 8px;
+}
+
+/* Accept/Reject buttons */
+.accept-btn {
+  background: #3ba55d;
+}
+.accept-btn:hover {
+  background: #2d7d46;
+}
+
+.reject-btn {
+  background: #f04747;
+}
+.reject-btn:hover {
+  background: #d03d3d;
+}
+
+/* Forms styling */
+.auth-form {
+  background: #36393f;
+  padding: 32px 40px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #0003;
+  max-width: 400px;
+  margin: 60px auto;
+}
+
+.auth-form h2 {
+  color: #fff;
+  margin-bottom: 24px;
+}
+
+.auth-form label {
+  color: #b9bbbe;
+}
+
+.auth-form input {
+  background: #40444b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  width: 100%;
+}
+
+.auth-form button {
+  background: #5865f2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.auth-form button:hover {
+  background: #4752c4;
+}
+
+.auth-form .alert {
+  background: #ed4245;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #b9bbbe;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 10px;
+  background: #40444b;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+#invite-link-container {
+  display: flex;
+  margin-bottom: 16px;
+}
+
+#invite-link {
+  flex: 1;
+  margin-right: 8px;
+}
+
+/* Checkboxes for friend selection */
+#friend-selection {
+  max-height: 200px;
+  overflow-y: auto;
+  background: #2f3136;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.friend-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.friend-checkbox input {
+  margin-right: 8px;
+}

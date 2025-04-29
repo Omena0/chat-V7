@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}Chat | Chat App{% endblock %}
+{% block head %}
+<meta name="token" content="{{ token }}">
+<meta name="username" content="{{ username }}">
+{% endblock %}
+{% block content %}
+<div class="chat-container">    <!-- Navigation Sidebar - Server Icons Only -->
+    <div class="chat-nav">
+        <div class="server-sidebar" id="server-list">
+            <!-- Home icon will be first in the list via JS -->
+            <!-- Server icons will be injected here by JS -->
+        </div>
+        <div class="server-actions">
+            <button id="create-server" title="Create Server" class="create-button">+</button>
+        </div>
+    </div>    <!-- Home/DM Content - Will be shown when home is selected -->
+    <div id="home-content" class="home-content">
+        <!-- Friends & DMs -->
+        <div class="home-sidebar">
+            <div class="section-header">
+                <span>Friends</span>
+            </div>
+            <div class="friend-actions">
+                <button id="add-friend" class="small-button">Add Friend</button>
+                <button id="pending-requests" class="small-button"><span id="request-count">0</span> Requests</button>
+            </div>
+            <div id="friend-list" class="list-container">
+                <!-- Friend list will be injected here -->
+            </div>
+            <div class="section-header">
+                <span>Direct Messages</span>
+            </div>
+            <div id="dm-list" class="list-container">
+                <!-- DM list will be injected here -->
+            </div>
+            <button id="create-group-chat" class="small-button">Create Group</button>
+        </div>
+
+        <div class='channel-header' id="channel-header">
+            <!-- Channel name will be injected here -->
+        </div>
+
+        <!-- Chat Area for DMs -->
+        <div class="home-main">
+            <div class="messages-area" id="messages"></div>
+            <form id="send-message-form" class="message-input">
+                <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+        <!-- Server Content -->
+    <div class="chat-content" id="server-content" style="display:none;">
+        <!-- Server Channels -->
+        <div class="channels-sidebar" id="channels-container">
+            <!-- Server header with dropdown menu -->
+            <div class="server-header" id="server-header">
+                <h3>Select a server</h3>
+                <span style="font-size:1.2em;">⌄</span>
+                <div class="server-header-menu" id="server-header-menu">
+                    <div class="server-header-menu-item" id="edit-server">Edit Server</div>
+                    <div class="server-header-menu-item" id="create-invite">Create Invite</div>
+                    <div class="server-header-menu-item" id="server-settings">Server Settings</div>
+                    <div class="server-header-menu-item danger" id="leave-server">Leave Server</div>
+                    <div class="server-header-menu-item danger" id="delete-server">Delete Server</div>
+                </div>
+            </div>
+
+            <h5>Text Channels</h5>
+            <div class="channels-scroll">
+                <ul id="channel-list"></ul>
+            </div>
+            <button id="create-channel" class="small-button">Create Channel</button>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-main">
+            <div class="messages-area" id="messages"></div>
+            <form id="send-message-form" class="message-input">
+                <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+        <!-- No duplicate chat area needed -->
+
+    <!-- Friend Request Modal -->
+    <div id="friend-request-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Friend Requests</h2>
+            <div id="incoming-requests"></div>
+        </div>
+    </div>
+
+    <!-- Add Friend Modal -->
+    <div id="add-friend-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Add Friend</h2>
+            <div class="form-group">
+                <input type="text" id="friend-username" placeholder="Enter a username">
+                <button id="send-friend-request">Send Friend Request</button>
+            </div>
+            <div id="friend-request-status"></div>
+        </div>
+    </div>
+
+    <!-- Create Invite Modal -->
+    <div id="create-invite-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Invite Friends</h2>
+            <div id="invite-link-container">
+                <input type="text" id="invite-link" readonly>
+                <button id="copy-invite">Copy</button>
+            </div>
+            <div class="form-group">
+                <label>Expires after:</label>
+                <select id="invite-expiry">
+                    <option value="3600">1 hour</option>
+                    <option value="86400" selected>1 day</option>
+                    <option value="604800">1 week</option>
+                    <option value="2592000">30 days</option>
+                    <option value="0">Never</option>
+                </select>
+                <button id="generate-invite">Generate Invite</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Server Modal -->
+    <div id="join-server-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Join a Server</h2>
+            <div class="form-group">
+                <input type="text" id="invite-code" placeholder="Enter an invite code">
+                <button id="join-with-invite">Join Server</button>
+            </div>
+            <div id="join-server-status"></div>
+        </div>
+    </div>
+
+    <!-- Create Group Chat Modal -->
+    <div id="create-group-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Create Group Chat</h2>
+            <div class="form-group">
+                <input type="text" id="group-name" placeholder="Group name">
+            </div>
+            <div class="form-group">
+                <label>Select friends to add:</label>
+                <div id="friend-selection"></div>
+            </div>
+            <button id="create-group-confirm">Create Group</button>
+        </div>
+    </div>
+
+    <!-- Server Settings Modal -->
+    <div id="server-settings-modal" class="modal">
+        <div class="modal-content wide-modal">
+            <span class="close">&times;</span>
+            <h2>Server Settings</h2>
+            <div class="form-group">
+                <label for="server-name-input">Server Name</label>
+                <input type="text" id="server-name-input">
+            </div>
+            <div class="form-group">
+                <label for="server-description">Description</label>
+                <textarea id="server-description"></textarea>
+            </div>
+            <button id="save-server-settings">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Context Menus -->
+    <div id="server-context-menu" class="context-menu">
+        <div class="context-menu-item" id="ctx-edit-server"><i>✎</i> Edit Server</div>
+        <div class="context-menu-item" id="ctx-create-invite"><i>+</i> Create Invite</div>
+        <div class="context-menu-item" id="ctx-server-settings"><i>⚙</i> Server Settings</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item danger" id="ctx-leave-server"><i>←</i> Leave Server</div>
+        <div class="context-menu-item danger" id="ctx-delete-server"><i>×</i> Delete Server</div>
+    </div>    <div id="user-context-menu" class="context-menu">
+        <div class="context-menu-item" id="ctx-user-profile"><i>👤</i> View Profile</div>
+        <div class="context-menu-item" id="ctx-send-dm"><i>✉</i> Message</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" id="ctx-add-friend"><i>+</i> Add Friend</div>
+        <div class="context-menu-item danger" id="ctx-remove-friend"><i>-</i> Remove Friend</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" id="ctx-set-nickname"><i>✎</i> Change Nickname</div>
+        <div class="context-menu-item" id="ctx-timeout-user"><i>⏱</i> Timeout User</div>
+        <div class="context-menu-item" id="ctx-remove-timeout"><i>⏲</i> Remove Timeout</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item danger" id="ctx-kick-user"><i>👢</i> Kick</div>
+        <div class="context-menu-item danger" id="ctx-ban-user"><i>🚫</i> Ban</div>
+    </div>
+
+    <div id="group-context-menu" class="context-menu">
+        <div class="context-menu-item" id="ctx-group-settings"><i>⚙</i> Group Settings</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" id="ctx-add-people"><i>+</i> Add People</div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item danger" id="ctx-leave-group"><i>←</i> Leave Group</div>
+        <div class="context-menu-item danger" id="ctx-disband-group"><i>×</i> Disband Group</div>
+    </div>
+
+    <!-- Custom Dialog Templates -->
+    <div id="custom-prompt" class="custom-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <h3 id="prompt-title">Prompt</h3>
+            </div>
+            <div class="dialog-body">
+                <p id="prompt-message"></p>
+                <input type="text" id="prompt-input">
+            </div>
+            <div class="dialog-buttons">
+                <button class="btn-cancel" id="prompt-cancel">Cancel</button>
+                <button class="btn-confirm" id="prompt-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-confirm" class="custom-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <h3 id="confirm-title">Confirm</h3>
+            </div>
+            <div class="dialog-body">
+                <p id="confirm-message"></p>
+            </div>
+            <div class="dialog-buttons">
+                <button class="btn-cancel" id="confirm-cancel">Cancel</button>
+                <button class="btn-danger" id="confirm-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Nickname Change Modal -->
+    <div id="nickname-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Change Nickname</h2>
+            <div class="form-group">
+                <label for="nickname-input">Nickname (leave blank to reset)</label>
+                <input type="text" id="nickname-input" placeholder="Enter nickname" maxlength="32">
+            </div>
+            <input type="hidden" id="nickname-username">
+            <input type="hidden" id="nickname-server-id">
+            <button id="save-nickname">Save</button>
+        </div>
+    </div>
+
+    <!-- Timeout User Modal -->
+    <div id="timeout-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Timeout User</h2>
+            <div class="form-group">
+                <label for="timeout-duration">Duration</label>
+                <select id="timeout-duration">
+                    <option value="60">1 minute</option>
+                    <option value="300" selected>5 minutes</option>
+                    <option value="3600">1 hour</option>
+                    <option value="86400">1 day</option>
+                    <option value="604800">1 week</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="timeout-reason">Reason (optional)</label>
+                <input type="text" id="timeout-reason" placeholder="Reason for timeout">
+            </div>
+            <input type="hidden" id="timeout-username">
+            <input type="hidden" id="timeout-server-id">
+            <button id="confirm-timeout">Apply Timeout</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/state.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/ui.js"></script>
+<script src="/static/js/chat.js"></script>
+<script src="/static/js/context-menus.js"></script>
+<script src="/static/js/events.js"></script>
+<script src="/static/js/main.js"></script>
+{% endblock %}

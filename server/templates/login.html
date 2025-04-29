@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Login | Chat App{% endblock %}
+{% block content %}
+<div class="form">
+  <h2>Login</h2>
+  <form id="login-form">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" required>
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required>
+    <button type="submit">Login</button>
+  </form>
+  {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/login.js"></script>
+{% endblock %}

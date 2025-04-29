@@ -1,0 +1,54 @@
+/* Home page styles for chat application */
+
+.home-content {
+  display: flex;
+  position: absolute;
+  left: 72px;
+  top: 0;
+  height: 100%;
+  width: calc(100% - 72px);
+  background: #36393f;
+}
+
+.home-sidebar {
+  width: 240px;
+  min-width: 240px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #2f3136;
+  padding: 16px 0;
+  border-right: 1px solid rgba(0,0,0,0.2);
+}
+
+.home-sidebar .section-header {
+  padding: 16px 16px 8px;
+  color: #b9bbbe;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.home-sidebar .friend-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.home-content .empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #72767d;
+  font-size: 16px;
+}
+
+.home-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}

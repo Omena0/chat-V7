@@ -1,0 +1,47 @@
+/* Base styles for chat application */
+body {
+  background: #313338;
+  color: #f2f3f5;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: #5865f2;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  color: white;
+}
+
+/* Top navigation */
+.navbar {
+  background: #23272a;
+  color: #fff;
+  padding: 0.5rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  z-index: 100;
+  position: relative;
+}
+
+.navbar a, .navbar span {
+  color: #fff;
+  text-decoration: none;
+  margin-left: 1rem;
+}

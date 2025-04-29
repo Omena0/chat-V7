@@ -1,0 +1,74 @@
+/* Layout styles for chat application */
+.chat-container {
+  display: flex;
+  height: calc(100vh - 50px); /* Subtract navbar height */
+  background: #36393f;
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+}
+
+/* Navigation with servers and friends */
+.chat-nav {
+  width: 72px;
+  min-width: 72px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #1e1f22;
+  overflow-y: auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #26282c;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Main content area */
+.chat-content {
+  flex: 1;
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.channels-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #2f3136;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-right: 1px solid rgba(0,0,0,0.2);
+}
+
+.channels-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 16px;
+  padding-right: 8px;
+}
+
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #36393f;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Column containers */
+.list-container {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0 8px;
+  width: calc(100% - 16px); /* Account for margins */
+  flex: 0 0 auto;
+}

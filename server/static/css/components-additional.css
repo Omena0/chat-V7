@@ -1,0 +1,118 @@
+/* Additional chat components styles */
+.message.pending {
+  opacity: 0.6;
+}
+
+.member-list-container {
+  width: 240px;
+  min-width: 240px;
+  background: #2f3136;
+  padding: 12px;
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+}
+
+/* User profile styles */
+.profile-header {
+  padding: 16px;
+  background: #36393f;
+  border-bottom: 1px solid #202225;
+}
+
+.profile-content {
+  padding: 16px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  cursor: pointer;
+}
+
+.member-item:hover {
+  background: #36393f;
+}
+
+.member-name {
+  margin-left: 8px;
+  color: #dcddde;
+  flex: 1;
+}
+
+.member-name.owner {
+  color: #ed4245;
+}
+
+.member-name.admin {
+  color: #5865f2;
+}
+
+/* Toast notification styles - updated */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  max-width: 350px;
+  background: #43444b;
+  color: white;
+  border-radius: 5px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: slideIn 0.3s ease-out;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.toast.error {
+  background-color: #ed4245;
+}
+
+.toast.success {
+  background-color: #3ba55c;
+}
+
+.toast.info {
+  background-color: #5865f2;
+}
+
+.toast-close {
+  margin-left: 12px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Timeout indicator */
+.timeout-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 5px;
+  background-color: #3ba55c;
+}
+
+.timeout-indicator.yellow {
+  background-color: #faa61a;
+}
+
+.timeout-indicator.red {
+  background-color: #ed4245;
+}

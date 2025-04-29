@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chat App{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/components-additional.css">
+    <link rel="stylesheet" href="/static/css/chat.css">
+    <link rel="stylesheet" href="/static/css/forms.css">
+    <link rel="stylesheet" href="/static/css/modals.css">
+    <link rel="stylesheet" href="/static/css/home.css">
+    <link rel="stylesheet" href="/static/css/server-list.css">
+    <link rel="stylesheet" href="/static/css/context-menu.css">
+    <link rel="stylesheet" href="/static/css/dialog.css">
+    {% block head %}{% endblock %}
+
+</head>
+<body>
+<nav class="navbar">
+  <div>
+    <a href="/" style="font-weight:bold;font-size:1.2em;">Chat App</a>
+  </div>
+  <div>
+    {% if username %}
+      <span>Logged in as {{ username }}</span>
+      <a href="/logout">Logout</a>
+    {% else %}
+      <a href="/login">Login</a>
+      <a href="/register">Register</a>
+    {% endif %}
+  </div>
+</nav>
+<div>{% block content %}{% endblock %}</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

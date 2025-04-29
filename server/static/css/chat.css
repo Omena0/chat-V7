@@ -1,0 +1,130 @@
+/* Chat specific styles */
+
+/* Messages container */
+.messages-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 0 32px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 60px); /* Account for message input area */
+}
+
+/* Individual message styles */
+.message {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 16px;
+  background-position: center;
+  background-size: cover;
+}
+
+.message .content {
+  background: #40444b;
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: #dcddde;
+  max-width: 600px;
+  word-break: break-word;
+}
+
+.message .author {
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.message .timestamp {
+  font-size: 0.7rem;
+  color: #72767d;
+  margin-left: 6px;
+}
+
+/* Message input area */
+.message-input {
+  background: #40444b;
+  padding: 16px 32px;
+  border-top: 1px solid #23272a;
+  display: flex;
+  align-items: center;
+  height: 60px;
+  min-height: 60px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.message-input input {
+  flex: 1;
+  background: #40444b;
+  border: none;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 16px;
+  outline: none;
+}
+
+.message-input button {
+  background: #5865f2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  margin-left: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.message-input button:hover {
+  background: #4752c4;
+}
+
+/* Empty states */
+.empty-chat {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: #72767d;
+  font-size: 16px;
+}
+
+.empty-message {
+  padding: 16px;
+  color: #72767d;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Loading states */
+.loading {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: #72767d;
+  font-size: 16px;
+}
+
+.error {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: #f04747;
+  font-size: 16px;
+}
